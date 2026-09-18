@@ -12,6 +12,12 @@ import { OverviewPage } from './pages/OverviewPage.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { SetupPage } from './pages/SetupPage.js';
 import { ServerDetailPage } from './pages/ServerDetailPage.js';
+import { AdminLayout } from './pages/admin/AdminLayout.js';
+import { AdminServersPage } from './pages/admin/AdminServersPage.js';
+import { AdminGroupsPage } from './pages/admin/AdminGroupsPage.js';
+import { AdminSecurityPage } from './pages/admin/AdminSecurityPage.js';
+import { AdminSettingsPage } from './pages/admin/AdminSettingsPage.js';
+import { AdminUsagePage } from './pages/admin/AdminUsagePage.js';
 import { Monitor } from 'lucide-react';
 
 function RootComponent() {
@@ -82,11 +88,47 @@ const wallRoute = createRoute({
   ),
 });
 
-// Admin placeholder route (will be fully implemented in M3-T5)
+// Admin Layout Route: /admin
 const adminRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin',
-  component: () => <Outlet />,
+  component: AdminLayout,
+});
+
+const adminIndexRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: '/',
+  component: AdminServersPage,
+});
+
+const adminServersRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: '/servers',
+  component: AdminServersPage,
+});
+
+const adminGroupsRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: '/groups',
+  component: AdminGroupsPage,
+});
+
+const adminSecurityRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: '/security',
+  component: AdminSecurityPage,
+});
+
+const adminSettingsRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: '/settings',
+  component: AdminSettingsPage,
+});
+
+const adminUsageRoute = createRoute({
+  getParentRoute: () => adminRoute,
+  path: '/usage',
+  component: AdminUsagePage,
 });
 
 const routeTree = rootRoute.addChildren([
@@ -95,7 +137,14 @@ const routeTree = rootRoute.addChildren([
   setupRoute,
   serverDetailRoute,
   wallRoute,
-  adminRoute,
+  adminRoute.addChildren([
+    adminIndexRoute,
+    adminServersRoute,
+    adminGroupsRoute,
+    adminSecurityRoute,
+    adminSettingsRoute,
+    adminUsageRoute,
+  ]),
 ]);
 
 export const router = createRouter({ routeTree });
