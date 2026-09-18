@@ -288,6 +288,12 @@ export class Hub extends DurableObject<Env> {
     }
 
     if (t === 's') {
+      // API §2.1 & SEC-M1-05: hello handshake must precede sample reporting
+      if (!att.helloReceived) {
+        ws.close(1008, 'hello required');
+        return;
+      }
+
       const parsed = agentSampleSchema.safeParse(data);
       if (!parsed.success) {
         ws.close(1008, 'invalid sample schema');

@@ -8,6 +8,34 @@ describe('Hub Durable Object Core & Storage', () => {
     APP_ORIGIN: 'http://localhost:8787',
   };
 
+  const defaultHostInfo = {
+    hostname: 'test-node',
+    os: 'linux',
+    platform: 'ubuntu',
+    platform_ver: '24.04',
+    kernel: '6.8.0',
+    arch: 'amd64',
+    virt: 'kvm',
+    cpu_model: 'EPYC',
+    cpu_cores: 4,
+    mem_total: 4000000000,
+    swap_total: 0,
+    disk_total: 50000000000,
+    boot_ts: 1700000000,
+  };
+
+  async function performHello(ws: WebSocket) {
+    ws.send(
+      JSON.stringify({
+        t: 'hello',
+        v: 1,
+        agent: '1.0.0',
+        host: defaultHostInfo,
+      })
+    );
+    await new Promise((r) => setTimeout(r, 60));
+  }
+
   async function createConnectedAgent(
     serverId: string,
     interval = 10
@@ -111,6 +139,7 @@ describe('Hub Durable Object Core & Storage', () => {
   it('overclocked_reporting_closes_socket_with_4008', async () => {
     // interval = 10s -> min interval is 5000ms
     const { clientWs } = await createConnectedAgent('srv_overclock', 10);
+    await performHello(clientWs);
 
     let closeCode: number | null = null;
     clientWs.addEventListener('close', (evt: CloseEvent) => {
@@ -144,6 +173,7 @@ describe('Hub Durable Object Core & Storage', () => {
   it('ring_upsert_same_slot_overwrites_and_getSeries_filters_by_ts', async () => {
     const serverId = 'srv_ring_test';
     const { clientWs, hubStub } = await createConnectedAgent(serverId, 10);
+    await performHello(clientWs);
 
     const now = Math.floor(Date.now() / 1000);
     // Align to minute boundary
@@ -241,6 +271,7 @@ describe('Hub Durable Object Core & Storage', () => {
   it('SEC_M1_04_bucket_with_drift_greater_than_5_min_is_dropped', async () => {
     const serverId = 'srv_drift_test';
     const { clientWs, hubStub } = await createConnectedAgent(serverId, 10);
+    await performHello(clientWs);
 
     const now = Math.floor(Date.now() / 1000);
 
@@ -316,5 +347,37 @@ describe('Hub Durable Object Core & Storage', () => {
     const res = await hubStub.getSeries(serverId, '24h');
     const json = (await res.json()) as { points: unknown[] };
     expect(json.points.length).toBe(0);
+  });
+
+  it('SEC_M1_05_sending_sample_before_hello_closes_socket_with_1008', async () => {
+    // Connect agent and send 's' directly WITHOUT sending 'hello' first
+    const { clientWs } = await createConnectedAgent('srv_no_hello', 10);
+
+    let closeCode: number | null = null;
+    let closeReason = '';
+    clientWs.addEventListener('close', (evt: CloseEvent) => {
+      closeCode = evt.code;
+      closeReason = evt.reason;
+    });
+
+    clientWs.send(
+      JSON.stringify({
+        t: 's',
+        ts: Math.floor(Date.now() / 1000),
+        cpu: 15,
+        ld: [0.1, 0.2, 0.3],
+        mem: { u: 100, t: 200 },
+        swp: { u: 0, t: 0 },
+        dsk: [{ m: '/', u: 10, t: 100 }],
+        net: { rx: 10, tx: 10, rxs: 1, txs: 1 },
+        cn: { tcp: 1, udp: 1 },
+        pr: 10,
+        up: 100,
+      })
+    );
+
+    await new Promise((r) => setTimeout(r, 100));
+    expect(closeCode).toBe(1008);
+    expect(closeReason).toBe('hello required');
   });
 });
