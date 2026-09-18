@@ -8,6 +8,7 @@ import type { AuthenticationResponseJSON } from '@simplewebauthn/server';
 import type { Env } from '../types.js';
 import * as db from '../db/index.js';
 import {
+  DEFAULT_TOKEN_PEPPER,
   fromBase64Url,
   hashIp,
   randomTokenHex,
@@ -119,7 +120,10 @@ authRouter.post('/passkey/verify', async (c) => {
     c.req.header('CF-Connecting-IP') ??
     c.req.header('X-Forwarded-For')?.split(',')[0]?.trim() ??
     '127.0.0.1';
-  const ipHash = await hashIp(clientIp, c.env.TOKEN_PEPPER || 'pepper');
+  const ipHash = await hashIp(
+    clientIp,
+    c.env.TOKEN_PEPPER || DEFAULT_TOKEN_PEPPER
+  );
 
   // 1. Consume challenge first (SEC-M1-03: prevent credential enumeration without valid challenge)
   const challengeBytes = await db.consumeChallenge(

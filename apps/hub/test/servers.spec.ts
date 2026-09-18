@@ -274,4 +274,52 @@ describe('Admin Server CRUD & Token Management', () => {
       await db.findServerByIdIncludeDeleted(testEnv.DB, serverId)
     ).not.toBeNull();
   });
+
+  it('SEC_M1_10_default_token_pepper_consistency_allows_agent_auth_without_env', async () => {
+    // Environment without TOKEN_PEPPER configured
+    const noPepperEnv = {
+      ...env,
+      APP_ORIGIN: 'http://localhost:8787',
+      // TOKEN_PEPPER is explicitly undefined
+      TOKEN_PEPPER: undefined,
+    };
+
+    // 1. Create server with noPepperEnv
+    const createRes = await app.request(
+      '/api/admin/servers',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Origin: noPepperEnv.APP_ORIGIN,
+          'X-NP-Request': '1',
+          Cookie: `${SESSION_COOKIE_NAME}=${adminSessionId}`,
+        },
+        body: JSON.stringify({ name: 'Pepper Fallback Server' }),
+      },
+      noPepperEnv
+    );
+    expect(createRes.status).toBe(200);
+    const createJson = (await createRes.json()) as {
+      data: { token: string };
+    };
+    const token = createJson.data.token;
+
+    // 2. Connect Agent with noPepperEnv -> MUST succeed with 101, not 401 mismatch!
+    const wsRes = await app.request(
+      '/ws/agent',
+      {
+        headers: {
+          Upgrade: 'websocket',
+          Connection: 'Upgrade',
+          'Sec-WebSocket-Key': 'dGhlIHNhbXBsZSBub25jZQ==',
+          'Sec-WebSocket-Version': '13',
+          Authorization: `Bearer ${token}`,
+        },
+      },
+      noPepperEnv
+    );
+    expect(wsRes.status).toBe(101);
+    expect(wsRes.webSocket).toBeDefined();
+  });
 });

@@ -6,6 +6,7 @@ import {
 import type { Env } from '../../types.js';
 import * as db from '../../db/index.js';
 import {
+  DEFAULT_TOKEN_PEPPER,
   hmacSha256,
   randomBytes,
   toBase64Url,
@@ -93,7 +94,7 @@ adminServersRouter.post('/', async (c) => {
 
   const now = Math.floor(Date.now() / 1000);
   const serverId = generateServerId(12);
-  const pepper = c.env.TOKEN_PEPPER || 'default_pepper_for_tests';
+  const pepper = c.env.TOKEN_PEPPER || DEFAULT_TOKEN_PEPPER;
   const { fullToken, tokenHash, tokenPrefix } = await generateServerToken(
     serverId,
     pepper
@@ -211,7 +212,7 @@ adminServersRouter.patch('/:id', async (c) => {
   });
 
   const auth = c.get('auth');
-  const pepper = c.env.TOKEN_PEPPER || 'default_pepper';
+  const pepper = c.env.TOKEN_PEPPER || DEFAULT_TOKEN_PEPPER;
   const ip = getClientIp(c);
   const ipHash = await hashIp(ip, pepper);
   await db.recordAudit(c.env.DB, {
@@ -254,7 +255,7 @@ adminServersRouter.delete('/:id', async (c) => {
   await db.softDeleteServer(c.env.DB, id, now);
 
   const auth = c.get('auth');
-  const pepper = c.env.TOKEN_PEPPER || 'default_pepper';
+  const pepper = c.env.TOKEN_PEPPER || DEFAULT_TOKEN_PEPPER;
   const ip = getClientIp(c);
   const ipHash = await hashIp(ip, pepper);
   await db.recordAudit(c.env.DB, {
@@ -294,7 +295,7 @@ adminServersRouter.post('/:id/token/rotate', async (c) => {
   }
 
   const now = Math.floor(Date.now() / 1000);
-  const pepper = c.env.TOKEN_PEPPER || 'default_pepper';
+  const pepper = c.env.TOKEN_PEPPER || DEFAULT_TOKEN_PEPPER;
   const { fullToken, tokenHash, tokenPrefix } = await generateServerToken(
     id,
     pepper

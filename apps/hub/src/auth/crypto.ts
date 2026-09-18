@@ -1,3 +1,6 @@
+export const DEFAULT_TOKEN_PEPPER =
+  'nodepulse_default_token_pepper_32_bytes_local';
+
 export async function sha256(input: string | Uint8Array): Promise<Uint8Array> {
   const data =
     typeof input === 'string' ? new TextEncoder().encode(input) : input;

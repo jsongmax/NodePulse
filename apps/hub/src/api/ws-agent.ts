@@ -1,7 +1,12 @@
 import { Hono } from 'hono';
 import type { Env } from '../types.js';
 import * as db from '../db/index.js';
-import { constantTimeEqual, hashIp, hmacSha256 } from '../auth/crypto.js';
+import {
+  DEFAULT_TOKEN_PEPPER,
+  constantTimeEqual,
+  hashIp,
+  hmacSha256,
+} from '../auth/crypto.js';
 import { getClientIp } from '../middleware/ratelimit.js';
 
 export const wsAgentRouter = new Hono<{ Bindings: Env }>();
@@ -14,7 +19,7 @@ wsAgentRouter.get('/', async (c) => {
   }
 
   const authHeader = c.req.header('Authorization');
-  const pepper = c.env.TOKEN_PEPPER || 'default_pepper';
+  const pepper = c.env.TOKEN_PEPPER || DEFAULT_TOKEN_PEPPER;
   const ip = getClientIp(c);
   const now = Math.floor(Date.now() / 1000);
 
