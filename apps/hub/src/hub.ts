@@ -281,7 +281,9 @@ export class Hub extends DurableObject<Env> {
         ts: now,
         static:
           scope === 'public'
-            ? (sanitizeHostForPublic(parsed.data.host) as typeof parsed.data.host)
+            ? (sanitizeHostForPublic(
+                parsed.data.host
+              ) as typeof parsed.data.host)
             : parsed.data.host,
       }));
       return;
@@ -439,8 +441,7 @@ export class Hub extends DurableObject<Env> {
       try {
         const att = ws.deserializeAttachment() as ViewerAttachment | null;
         const scope = att?.scope ?? 'public';
-        const msg =
-          typeof msgOrFn === 'function' ? msgOrFn(scope) : msgOrFn;
+        const msg = typeof msgOrFn === 'function' ? msgOrFn(scope) : msgOrFn;
         ws.send(JSON.stringify(msg));
       } catch {
         // Closed socket will be cleaned by runtime
@@ -520,12 +521,7 @@ export class Hub extends DurableObject<Env> {
     const lastJson = att.last ? JSON.stringify(att.last) : null;
 
     // Record offline in server_state
-    this.ctx.storage.sql.exec(
-      SERVER_STATE_OFFLINE_SQL,
-      att.id,
-      now,
-      lastJson
-    );
+    this.ctx.storage.sql.exec(SERVER_STATE_OFFLINE_SQL, att.id, now, lastJson);
 
     // Broadcast server.offline to viewers
     this.broadcastToViewers((scope) => ({

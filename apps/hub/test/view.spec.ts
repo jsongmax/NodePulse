@@ -257,7 +257,9 @@ describe('Viewer WebSocket & Read APIs (/ws/view & /api/bootstrap)', () => {
     });
 
     // 4. Connect agent and send hello
-    const hubNamespace = testEnv.HUB as unknown as DurableObjectNamespace<import('../src/hub.js').Hub>;
+    const hubNamespace = testEnv.HUB as unknown as DurableObjectNamespace<
+      import('../src/hub.js').Hub
+    >;
     const hubStub = hubNamespace.get(hubNamespace.idFromName('main'));
     const agentReq = new Request('http://localhost/ws/agent', {
       headers: {
@@ -300,9 +302,7 @@ describe('Viewer WebSocket & Read APIs (/ws/view & /api/bootstrap)', () => {
     expect(fullOnlineMsg).not.toBeNull();
     expect(fullOnlineMsg?.static?.hostname).toBe('prod-k8s-master-sensitive');
     expect(fullOnlineMsg?.static?.kernel).toBe('6.1.0-21-amd64-internal');
-    expect(fullOnlineMsg?.static?.cpu_model).toBe(
-      'Intel Xeon Platinum Secret'
-    );
+    expect(fullOnlineMsg?.static?.cpu_model).toBe('Intel Xeon Platinum Secret');
 
     // Public viewer receives sanitized host info (hostname, kernel, platform_ver, cpu_model stripped)
     expect(publicOnlineMsg).not.toBeNull();

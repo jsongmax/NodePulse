@@ -228,7 +228,10 @@ describe('Authentication, Sessions & Cookies', () => {
       testEnv
     );
     expect(res1.status).toBe(400);
-    const json1 = (await res1.json()) as { ok: boolean; error: { code: string } };
+    const json1 = (await res1.json()) as {
+      ok: boolean;
+      error: { code: string };
+    };
     expect(json1.ok).toBe(false);
     expect(json1.error.code).toBe('validation_failed');
 
@@ -254,7 +257,10 @@ describe('Authentication, Sessions & Cookies', () => {
       testEnv
     );
     expect(res2.status).toBe(400);
-    const json2 = (await res2.json()) as { ok: boolean; error: { code: string } };
+    const json2 = (await res2.json()) as {
+      ok: boolean;
+      error: { code: string };
+    };
     expect(json2.ok).toBe(false);
     expect(json2.error.code).toBe('validation_failed');
   });
