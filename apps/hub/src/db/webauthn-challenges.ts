@@ -8,6 +8,10 @@ export async function saveChallenge(
   const query = `
     INSERT INTO webauthn_challenges (id, challenge, kind, expires_at)
     VALUES (?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      challenge = excluded.challenge,
+      kind = excluded.kind,
+      expires_at = excluded.expires_at
   `;
   await db.prepare(query).bind(id, challenge, kind, expiresAt).run();
 }

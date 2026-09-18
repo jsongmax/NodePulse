@@ -47,11 +47,12 @@ describe('Setup Flow (/api/setup/* and /setup)', () => {
     APP_ORIGIN: 'http://localhost:8787',
   };
 
-  const headers = {
+  const getHeaders = (ipSuffix = 1) => ({
     'Content-Type': 'application/json',
     Origin: testEnv.APP_ORIGIN,
     'X-NP-Request': '1',
-  };
+    'CF-Connecting-IP': `192.0.2.${ipSuffix}`,
+  });
 
   beforeAll(async () => {
     await applyD1Migrations(testEnv.DB, migrations);
@@ -73,7 +74,7 @@ describe('Setup Flow (/api/setup/* and /setup)', () => {
       '/api/setup/verify',
       {
         method: 'POST',
-        headers,
+        headers: getHeaders(1),
         body: JSON.stringify({ token: 'wrong-token' }),
       },
       testEnv
@@ -89,7 +90,7 @@ describe('Setup Flow (/api/setup/* and /setup)', () => {
       '/api/setup/verify',
       {
         method: 'POST',
-        headers,
+        headers: getHeaders(2),
         body: JSON.stringify({ token: testEnv.SETUP_TOKEN }),
       },
       testEnv
@@ -110,7 +111,7 @@ describe('Setup Flow (/api/setup/* and /setup)', () => {
       '/api/setup/passkey/options',
       {
         method: 'POST',
-        headers,
+        headers: getHeaders(3),
       },
       testEnv
     );
@@ -121,7 +122,7 @@ describe('Setup Flow (/api/setup/* and /setup)', () => {
       '/api/setup/verify',
       {
         method: 'POST',
-        headers,
+        headers: getHeaders(3),
         body: JSON.stringify({ token: testEnv.SETUP_TOKEN }),
       },
       testEnv
@@ -135,7 +136,7 @@ describe('Setup Flow (/api/setup/* and /setup)', () => {
       {
         method: 'POST',
         headers: {
-          ...headers,
+          ...getHeaders(3),
           Cookie: `${SETUP_COOKIE_NAME}=${setupToken}`,
         },
       },
@@ -151,6 +152,52 @@ describe('Setup Flow (/api/setup/* and /setup)', () => {
     expect(optionsJson.data.challenge).toBeDefined();
   });
 
+  it('SEC_M1_07_repeated_passkey_options_requests_do_not_throw_primary_key_conflict', async () => {
+    // 1. Get setup cookie
+    const verifyRes = await app.request(
+      '/api/setup/verify',
+      {
+        method: 'POST',
+        headers: getHeaders(4),
+        body: JSON.stringify({ token: testEnv.SETUP_TOKEN }),
+      },
+      testEnv
+    );
+    const setCookie = verifyRes.headers.get('set-cookie');
+    const setupToken = getCookie(setCookie, SETUP_COOKIE_NAME);
+
+    // 2. First call
+    const res1 = await app.request(
+      '/api/setup/passkey/options',
+      {
+        method: 'POST',
+        headers: {
+          ...getHeaders(4),
+          Cookie: `${SETUP_COOKIE_NAME}=${setupToken}`,
+        },
+      },
+      testEnv
+    );
+    expect(res1.status).toBe(200);
+
+    // 3. Second call immediately (repeated challenge with same id setup:admin)
+    const res2 = await app.request(
+      '/api/setup/passkey/options',
+      {
+        method: 'POST',
+        headers: {
+          ...getHeaders(4),
+          Cookie: `${SETUP_COOKIE_NAME}=${setupToken}`,
+        },
+      },
+      testEnv
+    );
+    // Must succeed with 200, never 500 SQLite constraint error
+    expect(res2.status).toBe(200);
+    const json2 = (await res2.json()) as { ok: boolean };
+    expect(json2.ok).toBe(true);
+  });
+
   it('setup_done_causes_setup_endpoints_and_page_to_return_404', async () => {
     // Set setup_done to 1
     await db.setSetting(testEnv.DB, 'setup_done', '1');
@@ -164,7 +211,7 @@ describe('Setup Flow (/api/setup/* and /setup)', () => {
       '/api/setup/verify',
       {
         method: 'POST',
-        headers,
+        headers: getHeaders(5),
         body: JSON.stringify({ token: testEnv.SETUP_TOKEN }),
       },
       testEnv
@@ -176,7 +223,7 @@ describe('Setup Flow (/api/setup/* and /setup)', () => {
       '/api/setup/passkey/options',
       {
         method: 'POST',
-        headers,
+        headers: getHeaders(5),
       },
       testEnv
     );
