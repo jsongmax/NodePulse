@@ -13,6 +13,7 @@
 | [docs/API-AND-PROTOCOL.md](docs/API-AND-PROTOCOL.md)               | 实现 Agent          | HTTP API、Agent WebSocket 协议、Viewer 协议、告警语义、安装命令、错误码                                                           |
 | [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md)         | 实现 Agent          | 工作规则、M0–M6 里程碑、每个里程碑的任务与验收标准、踩坑预防                                                                      |
 | [docs/HANDOFF-PLAYBOOK.md](docs/HANDOFF-PLAYBOOK.md)               | 项目负责人          | 每个里程碑可直接复制的启动/审查/修复指令、验收动作、常见情况应答                                                                  |
+| [docs/DESIGN-HANDOFF.md](docs/DESIGN-HANDOFF.md)                   | 项目负责人 / 设计师 | Figma 稿完成后如何接入实现：交付物清单、Figma MCP、令牌同步、追加指令、验收与后续修改                                             |
 | [docs/FRONTEND-DESIGN.md](docs/FRONTEND-DESIGN.md)                 | Figma 设计师 / 前端 | 设计概念、令牌（颜色/字体/间距/动效）、组件清单、各页面规格、**大屏规格**、Figma 文件组织                                         |
 | [docs/design/wall-prototype.html](docs/design/wall-prototype.html) | 设计师 / 前端       | 大屏可运行原型：用浏览器打开即可；按 `1`/`2` 切换 Map/Grid 场景，按 `R` 触发一次全员上报                                          |
 

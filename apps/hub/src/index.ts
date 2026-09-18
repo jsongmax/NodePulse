@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import type { Env } from './types.js';
 import { Hub } from './hub.js';
+import { setupRouter } from './api/setup.js';
+import * as db from './db/index.js';
 
 export { Hub };
 
@@ -15,6 +17,26 @@ app.use('*', async (c, next) => {
   c.header('Cross-Origin-Opener-Policy', 'same-origin');
   c.header('Cross-Origin-Resource-Policy', 'same-origin');
 });
+
+// Setup page handler: returns 404 once setup_done is 1
+app.get('/setup', async (c) => {
+  let setupDone = false;
+  try {
+    setupDone = (await db.getSetting(c.env.DB, 'setup_done')) === '1';
+  } catch {
+    setupDone = false;
+  }
+  if (setupDone) {
+    return c.text('Not Found', 404);
+  }
+  if (c.env.ASSETS) {
+    return c.env.ASSETS.fetch(c.req.raw);
+  }
+  return c.text('Setup', 200);
+});
+
+// Setup APIs
+app.route('/api/setup', setupRouter);
 
 // Site public configuration
 app.get('/api/site', async (c) => {
@@ -57,29 +79,6 @@ app.get('/api/site', async (c) => {
         carousel_interval: 60,
         show_fields: ['cpu', 'mem', 'net'],
       },
-    },
-  });
-});
-
-// Setup status check
-app.get('/api/setup/status', async (c) => {
-  let setupDone = false;
-  if (c.env.DB) {
-    try {
-      const row = await c.env.DB.prepare(
-        'SELECT value FROM settings WHERE key = ?'
-      )
-        .bind('setup_done')
-        .first<{ value: string }>();
-      setupDone = row?.value === '1';
-    } catch {
-      setupDone = false;
-    }
-  }
-  return c.json({
-    ok: true,
-    data: {
-      setup_done: setupDone,
     },
   });
 });
