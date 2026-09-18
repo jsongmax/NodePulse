@@ -502,15 +502,58 @@ export class Hub extends DurableObject<Env> {
   }
 
   // RPC: syncConfig
-  async syncConfig(partial?: unknown): Promise<void> {
-    if (partial && typeof partial === 'object') {
-      const key = 'last_sync';
-      this.ctx.storage.sql.exec(
-        'INSERT INTO config_kv (key, json) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET json = excluded.json',
-        key,
-        JSON.stringify(partial)
-      );
+  async syncConfig(mutation?: {
+    action: string;
+    serverId?: string;
+    changes?: Record<string, unknown>;
+  }): Promise<void> {
+    if (!mutation || typeof mutation !== 'object') return;
+
+    // 1. Record mutation in config_kv
+    const key = 'last_sync';
+    this.ctx.storage.sql.exec(
+      'INSERT INTO config_kv (key, json) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET json = excluded.json',
+      key,
+      JSON.stringify(mutation)
+    );
+
+    // 2. Action-specific handling
+    if (mutation.action === 'server_deleted' && mutation.serverId) {
+      // SECURITY §4.5: Kick deleted agent
+      for (const ws of this.ctx.getWebSockets('agent:' + mutation.serverId)) {
+        ws.close(4403, 'server deleted');
+      }
+    } else if (mutation.action === 'token_rotated' && mutation.serverId) {
+      // SECURITY §4.5: Kick agent immediately on token rotation
+      for (const ws of this.ctx.getWebSockets('agent:' + mutation.serverId)) {
+        ws.close(4401, 'token rotated');
+      }
+    } else if (
+      mutation.action === 'server_updated' &&
+      mutation.serverId &&
+      mutation.changes
+    ) {
+      // If interval changed, send config hot update to agent
+      const newInterval = mutation.changes.interval_s as number | undefined;
+      if (newInterval !== undefined) {
+        for (const ws of this.ctx.getWebSockets('agent:' + mutation.serverId)) {
+          const att = ws.deserializeAttachment() as AgentAttachment | null;
+          if (att) {
+            att.interval = newInterval;
+            ws.serializeAttachment(att);
+          }
+          ws.send(JSON.stringify({ t: 'config', interval: newInterval }));
+        }
+      }
     }
+
+    // 3. Broadcast config change to viewers
+    this.broadcastToViewers({
+      t: 'config',
+      action: mutation.action,
+      serverId: mutation.serverId,
+      changes: mutation.changes,
+    });
   }
 
   // RPC: getSeries
