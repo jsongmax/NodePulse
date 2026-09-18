@@ -28,6 +28,35 @@ interface ViewerAttachment {
 
 type SocketAttachment = AgentAttachment | ViewerAttachment;
 
+export function sanitizeHostForPublic(host?: unknown): unknown {
+  if (!host || typeof host !== 'object') return host;
+  const h = host as Record<string, unknown>;
+  const {
+    hostname: _hostname,
+    kernel: _kernel,
+    platform_ver: _platform_ver,
+    cpu_model: _cpu_model,
+    ...rest
+  } = h;
+  return rest;
+}
+
+export function sanitizeSampleForPublic(
+  sample?: SampleWithoutBucket | null
+): SampleWithoutBucket | null {
+  if (!sample) return null;
+  return {
+    ...sample,
+    dsk: sample.dsk.map(({ m: _m, ...rest }) => ({ ...rest, m: '' })),
+  };
+}
+
+const SERVER_STATE_OFFLINE_SQL =
+  'INSERT INTO server_state (server_id, online, last_ts, last_json) ' +
+  'VALUES (?, 0, ?, ?) ' +
+  'ON CONFLICT(server_id) DO UPDATE SET ' +
+  'online = 0, last_ts = excluded.last_ts, last_json = excluded.last_json';
+
 export class Hub extends DurableObject<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -245,13 +274,16 @@ export class Hub extends DurableObject<Env> {
         })
       );
 
-      // Broadcast server.online to viewers
-      this.broadcastToViewers({
+      // Broadcast server.online to viewers (sanitized for public scope per SECURITY §4.4 & §13)
+      this.broadcastToViewers((scope) => ({
         t: 'server.online',
         id: att.id,
         ts: now,
-        static: parsed.data.host,
-      });
+        static:
+          scope === 'public'
+            ? (sanitizeHostForPublic(parsed.data.host) as typeof parsed.data.host)
+            : parsed.data.host,
+      }));
       return;
     }
 
@@ -282,13 +314,16 @@ export class Hub extends DurableObject<Env> {
       att.last = sampleWithoutBucket;
       ws.serializeAttachment(att);
 
-      // Broadcast delta to all viewers
-      this.broadcastToViewers({
+      // Broadcast delta to all viewers (sanitized for public scope)
+      this.broadcastToViewers((scope) => ({
         t: 'delta',
         id: att.id,
         ts: sample.ts,
-        s: sampleWithoutBucket,
-      });
+        s:
+          scope === 'public'
+            ? sanitizeSampleForPublic(sampleWithoutBucket)!
+            : sampleWithoutBucket,
+      }));
 
       // If bucket is present, upsert into ring_1m
       if (b) {
@@ -385,18 +420,23 @@ export class Hub extends DurableObject<Env> {
     ws.close(1008, 'command not supported');
   }
 
-  private broadcastToViewers(msg: unknown): void {
-    const raw = JSON.stringify(msg);
+  private broadcastToViewers(
+    msgOrFn: unknown | ((scope: 'full' | 'public') => unknown)
+  ): void {
     for (const ws of this.ctx.getWebSockets('viewer')) {
       try {
-        ws.send(raw);
+        const att = ws.deserializeAttachment() as ViewerAttachment | null;
+        const scope = att?.scope ?? 'public';
+        const msg =
+          typeof msgOrFn === 'function' ? msgOrFn(scope) : msgOrFn;
+        ws.send(JSON.stringify(msg));
       } catch {
         // Closed socket will be cleaned by runtime
       }
     }
   }
 
-  buildSnapshot(_scope: 'full' | 'public'): unknown {
+  buildSnapshot(scope: 'full' | 'public'): unknown {
     const now = Math.floor(Date.now() / 1000);
     const serversList: Array<{
       id: string;
@@ -414,7 +454,10 @@ export class Hub extends DurableObject<Env> {
         serversList.push({
           id: att.id,
           online: true,
-          last: att.last ?? null,
+          last:
+            scope === 'public'
+              ? sanitizeSampleForPublic(att.last)
+              : (att.last ?? null),
           last_ts: Math.floor(att.lastTs / 1000) || now,
         });
       }
@@ -439,7 +482,7 @@ export class Hub extends DurableObject<Env> {
         serversList.push({
           id: sid,
           online: false,
-          last,
+          last: scope === 'public' ? sanitizeSampleForPublic(last) : last,
           last_ts: (row.last_ts as number) || 0,
         });
       }
@@ -466,22 +509,22 @@ export class Hub extends DurableObject<Env> {
 
     // Record offline in server_state
     this.ctx.storage.sql.exec(
-      `INSERT INTO server_state (server_id, online, last_ts, last_json)
-       VALUES (?, 0, ?, ?)
-       ON CONFLICT(server_id) DO UPDATE SET
-         online = 0, last_ts = excluded.last_ts, last_json = excluded.last_json`,
+      SERVER_STATE_OFFLINE_SQL,
       att.id,
       now,
       lastJson
     );
 
     // Broadcast server.offline to viewers
-    this.broadcastToViewers({
+    this.broadcastToViewers((scope) => ({
       t: 'server.offline',
       id: att.id,
       ts: now,
-      last: att.last ?? null,
-    });
+      last:
+        scope === 'public'
+          ? sanitizeSampleForPublic(att.last)
+          : (att.last ?? null),
+    }));
   }
 
   async webSocketError(ws: WebSocket, error: unknown): Promise<void> {

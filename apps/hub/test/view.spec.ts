@@ -201,4 +201,116 @@ describe('Viewer WebSocket & Read APIs (/ws/view & /api/bootstrap)', () => {
     const json = (await res.json()) as { points: unknown[] };
     expect(Array.isArray(json.points)).toBe(true);
   });
+
+  it('SEC_M1_01_server_online_broadcast_sanitizes_host_for_public_scope_viewers', async () => {
+    // 1. Enable public mode so public viewer can connect
+    await db.setSetting(testEnv.DB, 'public_mode', '1');
+
+    // 2. Connect public viewer
+    const publicRes = await app.request(
+      '/ws/view',
+      {
+        headers: {
+          Upgrade: 'websocket',
+          Origin: testEnv.APP_ORIGIN,
+        },
+      },
+      testEnv
+    );
+    expect(publicRes.status).toBe(101);
+    const publicWs = publicRes.webSocket!;
+    publicWs.accept();
+
+    // 3. Connect full (admin) viewer
+    const fullRes = await app.request(
+      '/ws/view',
+      {
+        headers: {
+          Upgrade: 'websocket',
+          Origin: testEnv.APP_ORIGIN,
+          Cookie: `${SESSION_COOKIE_NAME}=${adminSessionId}`,
+        },
+      },
+      testEnv
+    );
+    expect(fullRes.status).toBe(101);
+    const fullWs = fullRes.webSocket!;
+    fullWs.accept();
+
+    let publicOnlineMsg: { static?: Record<string, unknown> } | null = null;
+    let fullOnlineMsg: { static?: Record<string, unknown> } | null = null;
+
+    publicWs.addEventListener('message', (evt: MessageEvent) => {
+      const data = JSON.parse(evt.data as string) as {
+        t: string;
+        static?: Record<string, unknown>;
+      };
+      if (data.t === 'server.online') publicOnlineMsg = data;
+    });
+
+    fullWs.addEventListener('message', (evt: MessageEvent) => {
+      const data = JSON.parse(evt.data as string) as {
+        t: string;
+        static?: Record<string, unknown>;
+      };
+      if (data.t === 'server.online') fullOnlineMsg = data;
+    });
+
+    // 4. Connect agent and send hello
+    const hubNamespace = testEnv.HUB as unknown as DurableObjectNamespace<import('../src/hub.js').Hub>;
+    const hubStub = hubNamespace.get(hubNamespace.idFromName('main'));
+    const agentReq = new Request('http://localhost/ws/agent', {
+      headers: {
+        Upgrade: 'websocket',
+        'X-NP-Kind': 'agent',
+        'X-NP-Server-Id': 'srv_audit_01',
+        'X-NP-Interval': '10',
+      },
+    });
+    const agentRes = await hubStub.fetch(agentReq);
+    const agentWs = agentRes.webSocket!;
+    agentWs.accept();
+
+    agentWs.send(
+      JSON.stringify({
+        t: 'hello',
+        v: 1,
+        agent: '1.0.0',
+        host: {
+          hostname: 'prod-k8s-master-sensitive',
+          os: 'linux',
+          platform: 'debian',
+          platform_ver: '12',
+          kernel: '6.1.0-21-amd64-internal',
+          arch: 'amd64',
+          virt: 'kvm',
+          cpu_model: 'Intel Xeon Platinum Secret',
+          cpu_cores: 8,
+          mem_total: 16000000000,
+          swap_total: 0,
+          disk_total: 100000000000,
+          boot_ts: 1700000000,
+        },
+      })
+    );
+
+    await new Promise((r) => setTimeout(r, 150));
+
+    // Full viewer receives unredacted host info
+    expect(fullOnlineMsg).not.toBeNull();
+    expect(fullOnlineMsg?.static?.hostname).toBe('prod-k8s-master-sensitive');
+    expect(fullOnlineMsg?.static?.kernel).toBe('6.1.0-21-amd64-internal');
+    expect(fullOnlineMsg?.static?.cpu_model).toBe(
+      'Intel Xeon Platinum Secret'
+    );
+
+    // Public viewer receives sanitized host info (hostname, kernel, platform_ver, cpu_model stripped)
+    expect(publicOnlineMsg).not.toBeNull();
+    expect(publicOnlineMsg?.static?.hostname).toBeUndefined();
+    expect(publicOnlineMsg?.static?.kernel).toBeUndefined();
+    expect(publicOnlineMsg?.static?.cpu_model).toBeUndefined();
+    expect(publicOnlineMsg?.static?.platform_ver).toBeUndefined();
+    expect(publicOnlineMsg?.static?.os).toBe('linux');
+    expect(publicOnlineMsg?.static?.arch).toBe('amd64');
+  });
 });
