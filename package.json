@@ -9,7 +9,7 @@
     "build": "pnpm -r build",
     "lint": "eslint . && node scripts/lint-agent.mjs",
     "typecheck": "pnpm -r exec tsc --noEmit",
-    "test": "pnpm -r test && node scripts/test-agent.mjs",
+    "test": "pnpm -r test && node scripts/test-agent.mjs && tsx scripts/test-contract.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "setup:cf": "node scripts/setup-cf.mjs",
@@ -25,6 +25,7 @@
     "eslint-plugin-security": "^3.0.1",
     "globals": "^15.15.0",
     "prettier": "^3.5.1",
+    "tsx": "^4.23.13",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.24.0",
     "ws": "^8.21.3"
