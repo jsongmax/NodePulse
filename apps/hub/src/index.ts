@@ -5,20 +5,22 @@ import { setupRouter } from './api/setup.js';
 import { authRouter } from './api/auth.js';
 import { shareRouter } from './api/share.js';
 import * as db from './db/index.js';
+import { securityHeadersMiddleware } from './middleware/headers.js';
+import { rateLimitMiddleware } from './middleware/ratelimit.js';
+import { csrfMiddleware } from './middleware/csrf.js';
 
 export { Hub };
 
 const app = new Hono<{ Bindings: Env }>();
 
-// Global security headers for all API requests
-app.use('*', async (c, next) => {
-  await next();
-  c.header('X-Content-Type-Options', 'nosniff');
-  c.header('X-Frame-Options', 'DENY');
-  c.header('Referrer-Policy', 'no-referrer');
-  c.header('Cross-Origin-Opener-Policy', 'same-origin');
-  c.header('Cross-Origin-Resource-Policy', 'same-origin');
-});
+// 1. Uniform security headers on all responses
+app.use('*', securityHeadersMiddleware);
+
+// 2. Rate limiting binding middleware
+app.use('*', rateLimitMiddleware);
+
+// 3. CSRF protection on non-GET /api/*
+app.use('*', csrfMiddleware);
 
 // Setup page handler: returns 404 once setup_done is 1
 app.get('/setup', async (c) => {

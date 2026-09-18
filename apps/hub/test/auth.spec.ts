@@ -166,6 +166,8 @@ describe('Authentication, Sessions & Cookies', () => {
       {
         method: 'POST',
         headers: {
+          Origin: testEnv.APP_ORIGIN,
+          'X-NP-Request': '1',
           Cookie: `${SESSION_COOKIE_NAME}=${rawSessionId}`,
         },
       },

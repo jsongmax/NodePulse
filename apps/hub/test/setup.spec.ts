@@ -47,6 +47,12 @@ describe('Setup Flow (/api/setup/* and /setup)', () => {
     APP_ORIGIN: 'http://localhost:8787',
   };
 
+  const headers = {
+    'Content-Type': 'application/json',
+    Origin: testEnv.APP_ORIGIN,
+    'X-NP-Request': '1',
+  };
+
   beforeAll(async () => {
     await applyD1Migrations(testEnv.DB, migrations);
   });
@@ -67,7 +73,7 @@ describe('Setup Flow (/api/setup/* and /setup)', () => {
       '/api/setup/verify',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ token: 'wrong-token' }),
       },
       testEnv
@@ -83,7 +89,7 @@ describe('Setup Flow (/api/setup/* and /setup)', () => {
       '/api/setup/verify',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ token: testEnv.SETUP_TOKEN }),
       },
       testEnv
@@ -104,7 +110,7 @@ describe('Setup Flow (/api/setup/* and /setup)', () => {
       '/api/setup/passkey/options',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
       },
       testEnv
     );
@@ -115,7 +121,7 @@ describe('Setup Flow (/api/setup/* and /setup)', () => {
       '/api/setup/verify',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ token: testEnv.SETUP_TOKEN }),
       },
       testEnv
@@ -129,7 +135,7 @@ describe('Setup Flow (/api/setup/* and /setup)', () => {
       {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          ...headers,
           Cookie: `${SETUP_COOKIE_NAME}=${setupToken}`,
         },
       },
@@ -158,7 +164,7 @@ describe('Setup Flow (/api/setup/* and /setup)', () => {
       '/api/setup/verify',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ token: testEnv.SETUP_TOKEN }),
       },
       testEnv
@@ -170,7 +176,7 @@ describe('Setup Flow (/api/setup/* and /setup)', () => {
       '/api/setup/passkey/options',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
       },
       testEnv
     );
