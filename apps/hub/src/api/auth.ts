@@ -121,49 +121,7 @@ authRouter.post('/passkey/verify', async (c) => {
     '127.0.0.1';
   const ipHash = await hashIp(clientIp, c.env.TOKEN_PEPPER || 'pepper');
 
-  // Look up passkey by credential ID
-  let credentialIdBytes: Uint8Array;
-  try {
-    credentialIdBytes = fromBase64Url(body.id);
-  } catch {
-    return c.json(
-      {
-        ok: false,
-        error: {
-          code: 'unauthorized',
-          message: 'Invalid credential format',
-        },
-      },
-      401
-    );
-  }
-
-  const passkey = await db.findPasskeyByCredentialId(
-    c.env.DB,
-    credentialIdBytes
-  );
-  if (!passkey) {
-    await db.recordAudit(c.env.DB, {
-      ts: now,
-      user_id: null,
-      action: 'login_failed',
-      target: body.id.slice(0, 16),
-      details: 'Passkey credential ID not found',
-      ip_hash: ipHash,
-    });
-    return c.json(
-      {
-        ok: false,
-        error: {
-          code: 'unauthorized',
-          message: 'Passkey not recognized',
-        },
-      },
-      401
-    );
-  }
-
-  // Consume challenge
+  // 1. Consume challenge first (SEC-M1-03: prevent credential enumeration without valid challenge)
   const challengeBytes = await db.consumeChallenge(
     c.env.DB,
     `auth:${challengeStr}`,
@@ -171,13 +129,36 @@ authRouter.post('/passkey/verify', async (c) => {
     now
   );
 
-  if (!challengeBytes) {
+  // 2. Parse credential ID and look up passkey
+  let credentialIdBytes: Uint8Array | null = null;
+  try {
+    credentialIdBytes = fromBase64Url(body.id);
+  } catch {
+    credentialIdBytes = null;
+  }
+
+  const passkey = credentialIdBytes
+    ? await db.findPasskeyByCredentialId(c.env.DB, credentialIdBytes)
+    : null;
+
+  // Unified error response to prevent oracle enumeration
+  if (!challengeBytes || !passkey) {
+    await db.recordAudit(c.env.DB, {
+      ts: now,
+      user_id: passkey?.user_id ?? null,
+      action: 'login_failed',
+      target: body.id.slice(0, 16),
+      details: !challengeBytes
+        ? 'Challenge expired or invalid'
+        : 'Passkey not recognized',
+      ip_hash: ipHash,
+    });
     return c.json(
       {
         ok: false,
         error: {
           code: 'unauthorized',
-          message: 'Authentication challenge expired or invalid',
+          message: 'Invalid or expired authentication credentials',
         },
       },
       401

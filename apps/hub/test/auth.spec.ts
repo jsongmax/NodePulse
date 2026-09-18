@@ -258,4 +258,93 @@ describe('Authentication, Sessions & Cookies', () => {
     expect(json2.ok).toBe(false);
     expect(json2.error.code).toBe('validation_failed');
   });
+
+  it('SEC_M1_03_passkey_verify_returns_identical_401_for_unknown_credential_and_invalid_challenge', async () => {
+    // Create a known passkey for admin
+    const knownCredId = new Uint8Array([11, 22, 33, 44]);
+    const knownCredIdBase64 = Buffer.from(knownCredId).toString('base64url');
+    await db.createPasskey(testEnv.DB, {
+      id: 'pk_oracle_test',
+      user_id: adminUserId,
+      credential_id: knownCredId,
+      public_key: new Uint8Array([1, 2, 3]),
+      counter: 0,
+      transports: null,
+      aaguid: null,
+      backed_up: 0,
+      name: 'Oracle Test',
+      created_at: Math.floor(Date.now() / 1000),
+      last_used_at: null,
+    });
+
+    const fakeClientDataJSON = Buffer.from(
+      JSON.stringify({ challenge: 'nonexistent_or_expired_challenge_12345' })
+    ).toString('base64url');
+
+    // 1. Request with unknown credential ID
+    const unknownRes = await app.request(
+      '/api/auth/passkey/verify',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Origin: testEnv.APP_ORIGIN,
+          'X-NP-Request': '1',
+        },
+        body: JSON.stringify({
+          id: 'unknown_nonexistent_cred_id',
+          response: {
+            clientDataJSON: fakeClientDataJSON,
+            authenticatorData: 'AQID',
+            signature: 'AQID',
+          },
+        }),
+      },
+      testEnv
+    );
+    expect(unknownRes.status).toBe(401);
+    const unknownJson = (await unknownRes.json()) as {
+      ok: boolean;
+      error: { code: string; message: string };
+    };
+
+    // 2. Request with known existing credential ID but invalid/expired challenge
+    const knownRes = await app.request(
+      '/api/auth/passkey/verify',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Origin: testEnv.APP_ORIGIN,
+          'X-NP-Request': '1',
+        },
+        body: JSON.stringify({
+          id: knownCredIdBase64,
+          response: {
+            clientDataJSON: fakeClientDataJSON,
+            authenticatorData: 'AQID',
+            signature: 'AQID',
+          },
+        }),
+      },
+      testEnv
+    );
+    expect(knownRes.status).toBe(401);
+    const knownJson = (await knownRes.json()) as {
+      ok: boolean;
+      error: { code: string; message: string };
+    };
+
+    // Both responses MUST be identical: same code, same message (Oracle eliminated)
+    expect(unknownJson.ok).toBe(false);
+    expect(knownJson.ok).toBe(false);
+    expect(unknownJson.error.code).toBe('unauthorized');
+    expect(knownJson.error.code).toBe('unauthorized');
+    expect(unknownJson.error.message).toBe(
+      'Invalid or expired authentication credentials'
+    );
+    expect(knownJson.error.message).toBe(
+      'Invalid or expired authentication credentials'
+    );
+  });
 });
