@@ -1,0 +1,47 @@
+version: 2
+project_name: nodepulse-agent
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: nodepulse-agent
+    main: ./cmd/nodepulse-agent
+    dir: ./agent
+    binary: nodepulse-agent
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -buildid=
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.buildDate={{.Date}}
+
+archives:
+  - id: binary-archive
+    builds:
+      - nodepulse-agent
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    format: binary
+
+checksum:
+  name_template: "SHA256SUMS"
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"

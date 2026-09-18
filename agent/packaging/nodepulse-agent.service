@@ -1,0 +1,33 @@
+[Unit]
+Description=NodePulse Telemetry Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=nodepulse
+Group=nodepulse
+ExecStart=/usr/local/bin/nodepulse-agent --config /etc/nodepulse/agent.yaml
+Restart=always
+RestartSec=5
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources @mount
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadWritePaths=/var/log/nodepulse
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
