@@ -12,7 +12,8 @@
     "test": "pnpm -r test && node scripts/test-agent.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "setup:cf": "node scripts/setup-cf.mjs"
+    "setup:cf": "node scripts/setup-cf.mjs",
+    "design:frames": "node scripts/design-frames.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.20.0",
