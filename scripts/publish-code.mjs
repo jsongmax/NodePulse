@@ -86,10 +86,19 @@ async function main() {
     if (leaked.length)
       throw new Error(`排除路径仍在发布树中：\n${leaked.join('\n')}`);
 
-    // 校验 2：任何历史提交都不含排除路径
+    // filter-branch 会在 refs/original/ 保留未重写的备份引用，必须删掉，否则会被一起推送/检查到
+    const backups = git(tmp, [
+      'for-each-ref',
+      '--format=%(refname)',
+      'refs/original/',
+    ]);
+    for (const ref of backups.split('\n').filter(Boolean))
+      git(tmp, ['update-ref', '-d', ref]);
+
+    // 校验 2：发布分支的任何历史提交都不含排除路径
     const histLeak = git(tmp, [
       'log',
-      '--all',
+      SOURCE_BRANCH,
       '--name-only',
       '--pretty=format:',
       '--',
