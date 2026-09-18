@@ -211,4 +211,51 @@ describe('Authentication, Sessions & Cookies', () => {
     expect(setCookie).toContain('HttpOnly');
     expect(setCookie).toContain('Secure');
   });
+
+  it('SEC_M1_02_passkey_verify_handles_malformed_payload_with_400_without_500', async () => {
+    // 1. Missing response property
+    const res1 = await app.request(
+      '/api/auth/passkey/verify',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Origin: testEnv.APP_ORIGIN,
+          'X-NP-Request': '1',
+        },
+        body: JSON.stringify({ id: 'valid_looking_id_without_response' }),
+      },
+      testEnv
+    );
+    expect(res1.status).toBe(400);
+    const json1 = (await res1.json()) as { ok: boolean; error: { code: string } };
+    expect(json1.ok).toBe(false);
+    expect(json1.error.code).toBe('validation_failed');
+
+    // 2. Malformed clientDataJSON (not base64 / invalid json)
+    const res2 = await app.request(
+      '/api/auth/passkey/verify',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Origin: testEnv.APP_ORIGIN,
+          'X-NP-Request': '1',
+        },
+        body: JSON.stringify({
+          id: 'test_id',
+          response: {
+            clientDataJSON: '!!!not_valid_base64!!!',
+            authenticatorData: 'AQID',
+            signature: 'AQID',
+          },
+        }),
+      },
+      testEnv
+    );
+    expect(res2.status).toBe(400);
+    const json2 = (await res2.json()) as { ok: boolean; error: { code: string } };
+    expect(json2.ok).toBe(false);
+    expect(json2.error.code).toBe('validation_failed');
+  });
 });

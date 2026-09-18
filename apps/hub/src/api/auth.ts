@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { z } from 'zod';
 import {
   generateAuthenticationOptions,
   verifyAuthenticationResponse,
@@ -19,6 +20,35 @@ import {
   VIEW_COOKIE_NAME,
 } from '../auth/cookies.js';
 import { requireView } from '../auth/middleware.js';
+
+export const passkeyAssertionSchema = z
+  .object({
+    id: z.string().min(1),
+    rawId: z.string().optional(),
+    response: z.object({
+      clientDataJSON: z.string().min(1),
+      authenticatorData: z.string().min(1),
+      signature: z.string().min(1),
+      userHandle: z.string().optional().nullable(),
+    }),
+    type: z.string().optional(),
+  })
+  .passthrough();
+
+export function extractChallengeFromClientData(
+  clientDataJSONBase64?: string
+): string | null {
+  if (!clientDataJSONBase64 || typeof clientDataJSONBase64 !== 'string')
+    return null;
+  try {
+    const rawBytes = fromBase64Url(clientDataJSONBase64);
+    const jsonStr = new TextDecoder().decode(rawBytes);
+    const parsed = JSON.parse(jsonStr) as { challenge?: unknown };
+    return typeof parsed.challenge === 'string' ? parsed.challenge : null;
+  } catch {
+    return null;
+  }
+}
 
 export const authRouter = new Hono<{ Bindings: Env }>();
 
@@ -51,16 +81,33 @@ authRouter.post('/passkey/options', async (c) => {
 
 // POST /api/auth/passkey/verify
 authRouter.post('/passkey/verify', async (c) => {
-  const body = (await c.req
-    .json()
-    .catch(() => null)) as AuthenticationResponseJSON | null;
-  if (!body || !body.id) {
+  const rawBody = await c.req.json().catch(() => null);
+  const parsed = passkeyAssertionSchema.safeParse(rawBody);
+  if (!parsed.success) {
     return c.json(
       {
         ok: false,
         error: {
           code: 'validation_failed',
           message: 'Invalid passkey assertion payload',
+          details: parsed.error.flatten(),
+        },
+      },
+      400
+    );
+  }
+
+  const body = parsed.data as unknown as AuthenticationResponseJSON;
+  const challengeStr = extractChallengeFromClientData(
+    body.response?.clientDataJSON
+  );
+  if (!challengeStr) {
+    return c.json(
+      {
+        ok: false,
+        error: {
+          code: 'validation_failed',
+          message: 'Malformed clientDataJSON in assertion',
         },
       },
       400
@@ -119,7 +166,7 @@ authRouter.post('/passkey/verify', async (c) => {
   // Consume challenge
   const challengeBytes = await db.consumeChallenge(
     c.env.DB,
-    `auth:${body.response.clientDataJSON ? JSON.parse(new TextDecoder().decode(fromBase64Url(body.response.clientDataJSON))).challenge : ''}`,
+    `auth:${challengeStr}`,
     'authentication',
     now
   );
