@@ -41,7 +41,7 @@ export function Header() {
                 : 'bg-state-warn'
             }`}
           />
-          <span className="text-[11px] font-mono text-fg-3 uppercase">
+          <span className="text-[11px] font-mono text-fg-2 uppercase">
             {connectionStatus === 'connected' ? 'Live' : connectionStatus}
           </span>
         </div>

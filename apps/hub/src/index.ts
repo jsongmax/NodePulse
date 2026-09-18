@@ -111,8 +111,11 @@ app.get('/api/site', async (c) => {
   });
 });
 
-// 404 fallback
-app.notFound((c) => {
+// 404 fallback: serve static SPA assets if available and not an API/WebSocket route
+app.notFound(async (c) => {
+  if (c.env.ASSETS && !c.req.path.startsWith('/api') && !c.req.path.startsWith('/ws')) {
+    return c.env.ASSETS.fetch(c.req.raw);
+  }
   return c.json(
     {
       ok: false,

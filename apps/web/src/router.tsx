@@ -30,7 +30,7 @@ function RootComponent() {
       <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto">
         <Outlet />
       </main>
-      <footer className="py-4 border-t border-line-1 text-center text-xs text-fg-3 select-none">
+      <footer className="py-4 border-t border-line-1 text-center text-xs text-fg-2 select-none">
         NodePulse · Observatory Telemetry Platform
       </footer>
     </div>

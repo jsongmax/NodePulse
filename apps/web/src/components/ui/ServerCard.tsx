@@ -12,7 +12,7 @@ export interface ServerCardProps {
 }
 
 export function ServerCard({ server }: ServerCardProps) {
-  const { online, stale, last, lastTs, series } = server;
+  const { online, stale, last, series } = server;
 
   // Derive status state
   let statusState: 'ok' | 'warn' | 'crit' | 'off' | 'stale' = 'ok';
@@ -61,7 +61,7 @@ export function ServerCard({ server }: ServerCardProps) {
         ? 'border-l-4 border-l-state-warn border-line-1'
         : 'border-line-1';
 
-  const opacityClass = !online ? 'opacity-60' : '';
+  const opacityClass = '';
 
   return (
     <Link
@@ -83,7 +83,7 @@ export function ServerCard({ server }: ServerCardProps) {
           )}
         </div>
         <div className="text-right shrink-0">
-          <span className="font-mono text-xs text-fg-3">
+          <span className="font-mono text-xs text-fg-2">
             {online ? uptimeStr : '离线'}
           </span>
         </div>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { Search, ArrowUpDown, Server, AlertTriangle } from 'lucide-react';
+import { Search, ArrowUpDown, Server } from 'lucide-react';
 import { useServerStore } from '../store/serverStore.js';
 import { useI18n } from '../i18n/index.js';
 import { ServerCard } from '../components/ui/ServerCard.js';
@@ -168,7 +168,7 @@ export function OverviewPage() {
             <span className="text-xl font-bold text-fg-1 tabular-nums">
               {onlineCount}
             </span>
-            <span className="text-xs text-fg-3">/ {totalCount}</span>
+            <span className="text-xs text-fg-2">/ {totalCount}</span>
           </div>
         </div>
 
@@ -281,6 +281,7 @@ export function OverviewPage() {
           <div className="relative">
             <select
               value={sortBy}
+              aria-label={t('common.sort')}
               onChange={(e) => setSortBy(e.target.value as any)}
               className="appearance-none pl-7 pr-8 py-1.5 rounded-lg bg-bg-2 border border-line-1 text-xs text-fg-2 hover:text-fg-1 focus:outline-none focus:border-accent transition-colors cursor-pointer"
             >
