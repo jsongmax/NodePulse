@@ -49,13 +49,16 @@ const DRY_RUN = args.has('--dry-run');
 const FORCE = args.has('--force');
 
 const git = (cwd, argv, opts = {}) =>
-  execFileSync('git', argv, {
-    cwd,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env, FILTER_BRANCH_SQUELCH_WARNING: '1' },
-    ...opts,
-  }).trim();
+  (
+    execFileSync('git', argv, {
+      cwd,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, FILTER_BRANCH_SQUELCH_WARNING: '1' },
+      ...opts,
+    }) ?? ''
+  ) // stdio: 'inherit' 时返回 null
+    .trim();
 
 async function main() {
   git(ROOT, ['rev-parse', '--is-inside-work-tree']);
