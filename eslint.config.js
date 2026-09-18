@@ -67,5 +67,19 @@ export default tseslint.config(
       },
     },
   },
+  {
+    files: ['apps/web/src/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            'JSXAttribute[name.name="className"] Literal[value=/(#[0-9a-fA-F]{3,8}|rgba?\\(|hsla?\\()/]',
+          message:
+            'Do not use hardcoded hex or rgb/hsl color values in className. Use semantic tokens mapped via Tailwind theme classes (e.g. bg-bg-0, text-fg-1, text-accent).',
+        },
+      ],
+    },
+  },
   prettierConfig
 );

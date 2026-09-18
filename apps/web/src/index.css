@@ -1,40 +1,212 @@
 @import 'tailwindcss';
 
+/* 1. Self-hosted Fonts */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/inter-latin-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/inter-latin-500.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/inter-latin-600.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/inter-latin-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/jetbrains-mono-latin-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/jetbrains-mono-latin-500.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/jetbrains-mono-latin-600.woff2') format('woff2');
+}
+
+/* 2. Theme CSS Variables mapped from tokens.json */
+:root,
+[data-theme='dark'] {
+  --np-bg-0: #05070b;
+  --np-bg-1: #0a0e15;
+  --np-bg-2: #10161f;
+  --np-bg-3: #161e29;
+
+  --np-line-1: rgba(255, 255, 255, 0.06);
+  --np-line-2: rgba(255, 255, 255, 0.12);
+
+  --np-fg-1: #e8eef5;
+  --np-fg-2: #94a3b3;
+  --np-fg-3: #5b6b7c;
+
+  --np-accent: #38bdf8;
+  --np-accent-soft: rgba(56, 189, 248, 0.14);
+  --np-accent-glow: rgba(56, 189, 248, 0.4);
+
+  --np-state-ok: #34d399;
+  --np-state-warn: #fbbf24;
+  --np-state-crit: #fb7185;
+  --np-state-off: #64748b;
+  --np-state-stale: #8b9bae;
+
+  --np-metric-cpu: #38bdf8;
+  --np-metric-mem: #a78bfa;
+  --np-metric-disk: #f472b6;
+  --np-metric-net-in: #34d399;
+  --np-metric-net-out: #fbbf24;
+  --np-metric-load: #fb923c;
+  --np-metric-swap: #67e8f9;
+
+  --np-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --np-shadow-2: 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme='light'] {
+  --np-bg-0: #f5f7fa;
+  --np-bg-1: #ffffff;
+  --np-bg-2: #f0f3f7;
+  --np-bg-3: #e6ebf1;
+
+  --np-line-1: rgba(9, 14, 22, 0.08);
+  --np-line-2: rgba(9, 14, 22, 0.14);
+
+  --np-fg-1: #0b1220;
+  --np-fg-2: #4b5a6b;
+  --np-fg-3: #8a97a6;
+
+  --np-accent: #0284c7;
+  --np-accent-soft: rgba(2, 132, 199, 0.1);
+  --np-accent-glow: rgba(2, 132, 199, 0.3);
+
+  --np-state-ok: #059669;
+  --np-state-warn: #d97706;
+  --np-state-crit: #e11d48;
+  --np-state-off: #94a3b8;
+  --np-state-stale: #94a3b8;
+
+  --np-metric-cpu: #0284c7;
+  --np-metric-mem: #7c3aed;
+  --np-metric-disk: #db2777;
+  --np-metric-net-in: #059669;
+  --np-metric-net-out: #d97706;
+  --np-metric-load: #ea580c;
+  --np-metric-swap: #0891b2;
+
+  --np-shadow-1: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --np-shadow-2: 0 8px 20px -6px rgba(0, 0, 0, 0.12);
+}
+
+/* 3. Tailwind v4 Theme Configuration */
 @theme {
-  --color-bg-0: #05070b;
-  --color-bg-1: #0a0e15;
-  --color-bg-2: #10161f;
-  --color-bg-3: #161e29;
+  --color-bg-0: var(--np-bg-0);
+  --color-bg-1: var(--np-bg-1);
+  --color-bg-2: var(--np-bg-2);
+  --color-bg-3: var(--np-bg-3);
 
-  --color-fg-1: #e8eef5;
-  --color-fg-2: #94a3b3;
-  --color-fg-3: #5b6b7c;
+  --color-line-1: var(--np-line-1);
+  --color-line-2: var(--np-line-2);
 
-  --color-accent: #38bdf8;
-  --color-accent-soft: rgba(56, 189, 248, 0.14);
-  --color-accent-glow: rgba(56, 189, 248, 0.4);
+  --color-fg-1: var(--np-fg-1);
+  --color-fg-2: var(--np-fg-2);
+  --color-fg-3: var(--np-fg-3);
 
-  --color-state-ok: #34d399;
-  --color-state-warn: #fbbf24;
-  --color-state-crit: #fb7185;
-  --color-state-off: #64748b;
-  --color-state-stale: #8b9bae;
+  --color-accent: var(--np-accent);
+  --color-accent-soft: var(--np-accent-soft);
+  --color-accent-glow: var(--np-accent-glow);
 
-  --color-metric-cpu: #38bdf8;
-  --color-metric-mem: #a78bfa;
-  --color-metric-disk: #f472b6;
-  --color-metric-net-in: #34d399;
-  --color-metric-net-out: #fbbf24;
-  --color-metric-load: #fb923c;
-  --color-metric-swap: #67e8f9;
+  --color-state-ok: var(--np-state-ok);
+  --color-state-warn: var(--np-state-warn);
+  --color-state-crit: var(--np-state-crit);
+  --color-state-off: var(--np-state-off);
+  --color-state-stale: var(--np-state-stale);
 
+  --color-metric-cpu: var(--np-metric-cpu);
+  --color-metric-mem: var(--np-metric-mem);
+  --color-metric-disk: var(--np-metric-disk);
+  --color-metric-net-in: var(--np-metric-net-in);
+  --color-metric-net-out: var(--np-metric-net-out);
+  --color-metric-load: var(--np-metric-load);
+  --color-metric-swap: var(--np-metric-swap);
+
+  --font-ui: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
 }
 
 body {
   margin: 0;
-  background-color: var(--color-bg-0);
-  color: var(--color-fg-1);
-  font-family: Inter, 'Noto Sans SC', system-ui, sans-serif;
+  background-color: var(--np-bg-0);
+  color: var(--np-fg-1);
+  font-family: var(--font-ui);
   -webkit-font-smoothing: antialiased;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+/* Glass surface effect per tokens.json */
+.surface-glass {
+  background-color: color-mix(in srgb, var(--np-bg-1) 80%, transparent);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--np-line-1);
+  box-shadow: var(--np-shadow-1);
+}
+
+.surface-elevated {
+  background-color: var(--np-bg-1);
+  border: 1px solid var(--np-line-1);
+  box-shadow: var(--np-shadow-2);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Reduced motion preference support per SECURITY / DESIGN */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
