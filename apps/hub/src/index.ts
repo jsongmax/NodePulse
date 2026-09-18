@@ -7,6 +7,8 @@ import { shareRouter } from './api/share.js';
 import { adminServersRouter } from './api/admin/servers.js';
 import { adminGroupsRouter } from './api/admin/groups.js';
 import { wsAgentRouter } from './api/ws-agent.js';
+import { wsViewRouter } from './api/ws-view.js';
+import { viewRouter } from './api/view.js';
 import * as db from './db/index.js';
 import { securityHeadersMiddleware } from './middleware/headers.js';
 import { rateLimitMiddleware } from './middleware/ratelimit.js';
@@ -57,6 +59,12 @@ app.route('/api/admin/groups', adminGroupsRouter);
 
 // Agent WebSocket entrypoint
 app.route('/ws/agent', wsAgentRouter);
+
+// Viewer WebSocket entrypoint
+app.route('/ws/view', wsViewRouter);
+
+// Public & View read APIs
+app.route('/api', viewRouter);
 
 // Site public configuration
 app.get('/api/site', async (c) => {
