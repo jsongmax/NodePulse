@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { env } from 'cloudflare:test';
+import { env, runInDurableObject } from 'cloudflare:test';
 import type { Hub } from '../src/hub.js';
 
 describe('Hub Durable Object Core & Storage', () => {
@@ -208,17 +208,20 @@ describe('Hub Durable Object Core & Storage', () => {
     expect(point[1]).toBe(88.8);
     expect(point[2]).toBe(99.9);
 
-    // 4. Test filtering: an older point (> 1 hour ago) is filtered out
+    // 4. Test filtering: an older point (> 1 hour ago) is filtered out in getSeries
     const oldMinuteTs = now - 7200; // 2 hours ago
-    const oldSample = {
-      ...sampleWithBucket1,
-      b: {
-        ...sampleWithBucket1.b,
-        ts: oldMinuteTs,
-      },
-    };
-    clientWs.send(JSON.stringify(oldSample));
-    await new Promise((r) => setTimeout(r, 100));
+    await runInDurableObject(hubStub, (instance) => {
+      const oldSlot = Math.floor(oldMinuteTs / 60) % 2880;
+      instance.ctx.storage.sql.exec(
+        'INSERT INTO ring_1m (server_id, slot, ts, cpu_a, cpu_m, n) VALUES (?, ?, ?, ?, ?, ?)',
+        serverId,
+        oldSlot,
+        oldMinuteTs,
+        15.0,
+        20.0,
+        30
+      );
+    });
 
     // Query 1h -> only 1 point (the recent one), old one filtered out
     const recentRes = await hubStub.getSeries(serverId, '1h');
@@ -233,5 +236,85 @@ describe('Hub Durable Object Core & Storage', () => {
       points: unknown[];
     };
     expect(dayJson.points.length).toBe(2);
+  });
+
+  it('SEC_M1_04_bucket_with_drift_greater_than_5_min_is_dropped', async () => {
+    const serverId = 'srv_drift_test';
+    const { clientWs, hubStub } = await createConnectedAgent(serverId, 10);
+
+    const now = Math.floor(Date.now() / 1000);
+
+    // 1. Bucket drifted into the past by 10 minutes (> 300s)
+    clientWs.send(
+      JSON.stringify({
+        t: 's',
+        ts: now,
+        cpu: 10,
+        ld: [0.1, 0.2, 0.3],
+        mem: { u: 100, t: 200 },
+        swp: { u: 0, t: 0 },
+        dsk: [{ m: '/', u: 10, t: 100 }],
+        net: { rx: 10, tx: 10, rxs: 1, txs: 1 },
+        cn: { tcp: 1, udp: 1 },
+        pr: 10,
+        up: 100,
+        b: {
+          ts: now - 600, // 10 minutes ago
+          cpu: [50.0],
+          mem: [50.0],
+          swp: [0],
+          dsk: [50.0],
+          ld1: [0.5],
+          nin: [100],
+          nout: [100],
+          rxb: 100,
+          txb: 100,
+          tcp: [1],
+          udp: [1],
+          pr: [1],
+          n: 30,
+        },
+      })
+    );
+
+    // 2. Bucket drifted into the future by 10 minutes (> 300s)
+    clientWs.send(
+      JSON.stringify({
+        t: 's',
+        ts: now,
+        cpu: 10,
+        ld: [0.1, 0.2, 0.3],
+        mem: { u: 100, t: 200 },
+        swp: { u: 0, t: 0 },
+        dsk: [{ m: '/', u: 10, t: 100 }],
+        net: { rx: 10, tx: 10, rxs: 1, txs: 1 },
+        cn: { tcp: 1, udp: 1 },
+        pr: 10,
+        up: 100,
+        b: {
+          ts: now + 600, // 10 minutes in future
+          cpu: [60.0],
+          mem: [60.0],
+          swp: [0],
+          dsk: [60.0],
+          ld1: [0.6],
+          nin: [100],
+          nout: [100],
+          rxb: 100,
+          txb: 100,
+          tcp: [1],
+          udp: [1],
+          pr: [1],
+          n: 30,
+        },
+      })
+    );
+
+    await new Promise((r) => setTimeout(r, 100));
+
+    // Both drifted buckets must be dropped and never written to ring_1m
+    const res = await hubStub.getSeries(serverId, '24h');
+    const json = (await res.json()) as { points: unknown[] };
+    expect(json.points.length).toBe(0);
   });
 });

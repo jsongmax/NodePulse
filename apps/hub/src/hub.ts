@@ -327,6 +327,12 @@ export class Hub extends DurableObject<Env> {
 
       // If bucket is present, upsert into ring_1m
       if (b) {
+        const hubNowSec = Math.floor(now / 1000);
+        // SECURITY §6: Drop bucket if drift > 5 min (300s) from Hub clock
+        if (Math.abs(b.ts - hubNowSec) > 300) {
+          return;
+        }
+
         const slot = Math.floor(b.ts / 60) % 2880;
         this.ctx.storage.sql.exec(
           `INSERT INTO ring_1m (
