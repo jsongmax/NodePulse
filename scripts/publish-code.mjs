@@ -17,6 +17,7 @@
  *   SOURCE_BRANCH    默认 master
  */
 import { execFileSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -30,8 +31,18 @@ const SOURCE_BRANCH = process.env.SOURCE_BRANCH ?? 'master';
 
 /** 从发布历史中剔除的路径（相对仓库根） */
 const EXCLUDE = ['docs', 'AGENTS.md', 'CLAUDE.md'];
-/** 发布树中不允许出现的字样（大小写不敏感）；命中即中止 */
-const FORBIDDEN_PATTERNS = ['nezha', '哪吒'];
+/**
+ * 发布树中不允许出现的字样（大小写不敏感），命中即中止。
+ * 列表放在本地文件 docs/publish-forbidden.txt（一行一个，# 开头为注释）；docs/ 不会被发布，
+ * 因此列表本身不会出现在公开仓库里。文件不存在时跳过该检查并给出警告。
+ */
+const FORBIDDEN_FILE = path.join(ROOT, 'docs', 'publish-forbidden.txt');
+const FORBIDDEN_PATTERNS = existsSync(FORBIDDEN_FILE)
+  ? readFileSync(FORBIDDEN_FILE, 'utf8')
+      .split('\n')
+      .map((s) => s.trim())
+      .filter((s) => s && !s.startsWith('#'))
+  : [];
 
 const args = new Set(process.argv.slice(2));
 const DRY_RUN = args.has('--dry-run');
@@ -107,19 +118,23 @@ async function main() {
     if (histLeak) throw new Error(`历史中仍有排除路径：\n${histLeak}`);
 
     // 校验 3：发布树中没有禁用字样
-    let hits = '';
-    try {
-      hits = git(tmp, [
-        'grep',
-        '-i',
-        '-l',
-        ...FORBIDDEN_PATTERNS.flatMap((p) => ['-e', p]),
-        'HEAD',
-      ]);
-    } catch {
-      /* grep 无匹配时退出码 1，视为通过 */
+    if (!FORBIDDEN_PATTERNS.length) {
+      console.warn('警告：未找到 docs/publish-forbidden.txt，跳过禁用字样检查');
+    } else {
+      let hits = '';
+      try {
+        hits = git(tmp, [
+          'grep',
+          '-i',
+          '-l',
+          ...FORBIDDEN_PATTERNS.flatMap((p) => ['-e', p]),
+          'HEAD',
+        ]);
+      } catch {
+        /* grep 无匹配时退出码 1，视为通过 */
+      }
+      if (hits) throw new Error(`发布树中含有禁用字样：\n${hits}`);
     }
-    if (hits) throw new Error(`发布树中含有禁用字样：\n${hits}`);
 
     const count = git(tmp, ['rev-list', '--count', 'HEAD']);
     const pubHead = git(tmp, ['rev-parse', '--short', 'HEAD']);
