@@ -6,6 +6,8 @@ import { authRouter } from './api/auth.js';
 import { shareRouter } from './api/share.js';
 import { adminServersRouter } from './api/admin/servers.js';
 import { adminGroupsRouter } from './api/admin/groups.js';
+import { adminAlertsRouter } from './api/admin/alerts.js';
+
 import { wsAgentRouter } from './api/ws-agent.js';
 import { wsViewRouter } from './api/ws-view.js';
 import { viewRouter } from './api/view.js';
@@ -56,6 +58,8 @@ app.route('/s', shareRouter);
 // Admin APIs
 app.route('/api/admin/servers', adminServersRouter);
 app.route('/api/admin/groups', adminGroupsRouter);
+app.route('/api/admin/alerts', adminAlertsRouter);
+
 
 // Agent WebSocket entrypoint
 app.route('/ws/agent', wsAgentRouter);

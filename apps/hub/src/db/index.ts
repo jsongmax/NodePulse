@@ -8,3 +8,4 @@ export * from './view-tokens.js';
 export * from './webauthn-challenges.js';
 export * from './settings.js';
 export * from './audit.js';
+export * from './alerts.js';

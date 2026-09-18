@@ -77,3 +77,40 @@ export interface AuditRecord {
   details: string | null;
   ip_hash: string | null;
 }
+
+export interface AlertRuleRecord {
+  id: string;
+  name: string;
+  enabled: number; // 0 or 1
+  metric: string; // cpu|mem|swap|disk|load1|net_in|net_out|offline|traffic_cycle
+  op: string; // > | >= | < | <=
+  threshold: number;
+  duration_s: number;
+  server_filter: string; // JSON: { groups: [], servers: [], all?: boolean }
+  channels: string; // JSON: string[] channel ids
+  severity: string; // warning | critical
+  cooldown_s: number;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface NotifyChannelRecord {
+  id: string;
+  type: string; // telegram | discord | slack | webhook
+  name: string;
+  config_enc: ArrayBuffer | Uint8Array;
+  enabled: number; // 0 or 1
+  created_at: number;
+}
+
+export interface AlertEventRecord {
+  id: string;
+  rule_id: string;
+  server_id: string;
+  severity: string;
+  state: string; // firing | resolved
+  value: number | null;
+  started_at: number;
+  resolved_at: number | null;
+  notified: number;
+}

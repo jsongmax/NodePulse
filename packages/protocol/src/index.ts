@@ -3,6 +3,7 @@ export * from './agent.js';
 export * from './hub.js';
 export * from './viewer.js';
 export * from './api.js';
+export * from './alerts.js';
 
 import { agentMessageSchema, type AgentMessage } from './agent.js';
 import {
