@@ -2,6 +2,8 @@ import { Hono } from 'hono';
 import type { Env } from './types.js';
 import { Hub } from './hub.js';
 import { setupRouter } from './api/setup.js';
+import { authRouter } from './api/auth.js';
+import { shareRouter } from './api/share.js';
 import * as db from './db/index.js';
 
 export { Hub };
@@ -37,6 +39,12 @@ app.get('/setup', async (c) => {
 
 // Setup APIs
 app.route('/api/setup', setupRouter);
+
+// Auth APIs
+app.route('/api/auth', authRouter);
+
+// Share links
+app.route('/s', shareRouter);
 
 // Site public configuration
 app.get('/api/site', async (c) => {
