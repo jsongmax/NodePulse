@@ -199,6 +199,12 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Accessible focus ring per FRONTEND-DESIGN §8 */
+:focus-visible {
+  outline: 2px solid var(--np-accent);
+  outline-offset: 2px;
+}
+
 /* Reduced motion preference support per SECURITY / DESIGN */
 @media (prefers-reduced-motion: reduce) {
   *,
