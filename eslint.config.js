@@ -43,15 +43,15 @@ export default tseslint.config(
         },
         {
           selector:
-            'CallExpression[callee.property.name="prepare"] TemplateLiteral',
+            'CallExpression[callee.property.name="prepare"] TemplateLiteral:has(TemplateElement + *)',
           message:
-            'Do not use template literals in db.prepare(). Use parameterized SQL with ? placeholders.',
+            'Do not use string interpolation in db.prepare(). Use parameterized SQL with ? placeholders.',
         },
         {
           selector:
-            'CallExpression[callee.property.name="exec"] TemplateLiteral',
+            'CallExpression[callee.property.name="exec"] TemplateLiteral:has(TemplateElement + *)',
           message:
-            'Do not use template literals in sql.exec(). Use parameterized SQL with ? placeholders.',
+            'Do not use string interpolation in sql.exec(). Use parameterized SQL with ? placeholders.',
         },
       ],
       '@typescript-eslint/no-unused-vars': [
