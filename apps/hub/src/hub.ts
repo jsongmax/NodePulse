@@ -275,7 +275,7 @@ export class Hub extends DurableObject<Env> {
       );
 
       // Broadcast server.online to viewers (sanitized for public scope per SECURITY §4.4 & §13)
-      this.broadcastToViewers((scope) => ({
+      this.broadcastToViewers((scope: 'full' | 'public') => ({
         t: 'server.online',
         id: att.id,
         ts: now,
@@ -323,7 +323,7 @@ export class Hub extends DurableObject<Env> {
       ws.serializeAttachment(att);
 
       // Broadcast delta to all viewers (sanitized for public scope)
-      this.broadcastToViewers((scope) => ({
+      this.broadcastToViewers((scope: 'full' | 'public') => ({
         t: 'delta',
         id: att.id,
         ts: sample.ts,
@@ -524,7 +524,7 @@ export class Hub extends DurableObject<Env> {
     this.ctx.storage.sql.exec(SERVER_STATE_OFFLINE_SQL, att.id, now, lastJson);
 
     // Broadcast server.offline to viewers
-    this.broadcastToViewers((scope) => ({
+    this.broadcastToViewers((scope: 'full' | 'public') => ({
       t: 'server.offline',
       id: att.id,
       ts: now,

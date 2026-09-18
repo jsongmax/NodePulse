@@ -298,19 +298,22 @@ describe('Viewer WebSocket & Read APIs (/ws/view & /api/bootstrap)', () => {
 
     await new Promise((r) => setTimeout(r, 150));
 
+    const full = fullOnlineMsg as { static?: Record<string, unknown> } | null;
+    const pub = publicOnlineMsg as { static?: Record<string, unknown> } | null;
+
     // Full viewer receives unredacted host info
-    expect(fullOnlineMsg).not.toBeNull();
-    expect(fullOnlineMsg?.static?.hostname).toBe('prod-k8s-master-sensitive');
-    expect(fullOnlineMsg?.static?.kernel).toBe('6.1.0-21-amd64-internal');
-    expect(fullOnlineMsg?.static?.cpu_model).toBe('Intel Xeon Platinum Secret');
+    expect(full).not.toBeNull();
+    expect(full?.static?.hostname).toBe('prod-k8s-master-sensitive');
+    expect(full?.static?.kernel).toBe('6.1.0-21-amd64-internal');
+    expect(full?.static?.cpu_model).toBe('Intel Xeon Platinum Secret');
 
     // Public viewer receives sanitized host info (hostname, kernel, platform_ver, cpu_model stripped)
-    expect(publicOnlineMsg).not.toBeNull();
-    expect(publicOnlineMsg?.static?.hostname).toBeUndefined();
-    expect(publicOnlineMsg?.static?.kernel).toBeUndefined();
-    expect(publicOnlineMsg?.static?.cpu_model).toBeUndefined();
-    expect(publicOnlineMsg?.static?.platform_ver).toBeUndefined();
-    expect(publicOnlineMsg?.static?.os).toBe('linux');
-    expect(publicOnlineMsg?.static?.arch).toBe('amd64');
+    expect(pub).not.toBeNull();
+    expect(pub?.static?.hostname).toBeUndefined();
+    expect(pub?.static?.kernel).toBeUndefined();
+    expect(pub?.static?.cpu_model).toBeUndefined();
+    expect(pub?.static?.platform_ver).toBeUndefined();
+    expect(pub?.static?.os).toBe('linux');
+    expect(pub?.static?.arch).toBe('amd64');
   });
 });

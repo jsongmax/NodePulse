@@ -7,7 +7,7 @@ import {
   VIEW_COOKIE_NAME,
   buildCookieHeader,
 } from '../src/auth/cookies.js';
-import { randomTokenHex, sha256Hex } from '../src/auth/crypto.js';
+import { randomTokenHex, sha256Hex, toBase64Url } from '../src/auth/crypto.js';
 
 const migrations = [
   {
@@ -268,7 +268,7 @@ describe('Authentication, Sessions & Cookies', () => {
   it('SEC_M1_03_passkey_verify_returns_identical_401_for_unknown_credential_and_invalid_challenge', async () => {
     // Create a known passkey for admin
     const knownCredId = new Uint8Array([11, 22, 33, 44]);
-    const knownCredIdBase64 = Buffer.from(knownCredId).toString('base64url');
+    const knownCredIdBase64 = toBase64Url(knownCredId);
     await db.createPasskey(testEnv.DB, {
       id: 'pk_oracle_test',
       user_id: adminUserId,
@@ -283,9 +283,10 @@ describe('Authentication, Sessions & Cookies', () => {
       last_used_at: null,
     });
 
-    const fakeClientDataJSON = Buffer.from(
+    const fakeClientDataBytes = new TextEncoder().encode(
       JSON.stringify({ challenge: 'nonexistent_or_expired_challenge_12345' })
-    ).toString('base64url');
+    );
+    const fakeClientDataJSON = toBase64Url(fakeClientDataBytes);
 
     // 1. Request with unknown credential ID
     const unknownRes = await app.request(

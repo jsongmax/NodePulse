@@ -242,7 +242,7 @@ describe('Hub Durable Object Core & Storage', () => {
     const oldMinuteTs = now - 7200; // 2 hours ago
     await runInDurableObject(hubStub, (instance) => {
       const oldSlot = Math.floor(oldMinuteTs / 60) % 2880;
-      instance.ctx.storage.sql.exec(
+      (instance as unknown as { ctx: DurableObjectState }).ctx.storage.sql.exec(
         'INSERT INTO ring_1m (server_id, slot, ts, cpu_a, cpu_m, n) VALUES (?, ?, ?, ?, ?, ?)',
         serverId,
         oldSlot,
