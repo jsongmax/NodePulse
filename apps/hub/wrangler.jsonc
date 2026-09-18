@@ -53,5 +53,6 @@
   },
   "vars": {
     "APP_ORIGIN": "http://localhost:8787",
+    "TOKEN_PEPPER": "local_dev_pepper_32_bytes_random_dev_val",
   },
 }
