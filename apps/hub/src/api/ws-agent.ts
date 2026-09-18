@@ -18,38 +18,41 @@ wsAgentRouter.get('/', async (c) => {
   const ip = getClientIp(c);
   const now = Math.floor(Date.now() / 1000);
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  const authFail = async (target: string | null, details: string) => {
+    if (c.env.RL_AGENT) {
+      await c.env.RL_AGENT.limit({ key: ip });
+    }
+    const ipHash = await hashIp(ip, pepper);
+    await db.recordAudit(c.env.DB, {
+      ts: now,
+      user_id: null,
+      action: 'agent_auth_failed',
+      target,
+      details,
+      ip_hash: ipHash,
+    });
     return c.text('Unauthorized', 401);
+  };
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return authFail(null, 'Missing or malformed Authorization header');
   }
 
   const token = authHeader.slice(7).trim();
   const parts = token.split('.');
   if (parts.length !== 3 || parts[0] !== 'np1') {
-    return c.text('Unauthorized', 401);
+    return authFail(null, 'Invalid token structure or prefix');
   }
 
   const [, serverId, secret] = parts;
   if (!serverId || !secret) {
-    return c.text('Unauthorized', 401);
+    return authFail(serverId || null, 'Empty server ID or secret in token');
   }
 
   const server = await db.findServerById(c.env.DB, serverId);
-  const ipHash = await hashIp(ip, pepper);
 
   if (!server) {
-    // Record audit and trigger rate limiter if present
-    if (c.env.RL_AGENT) {
-      await c.env.RL_AGENT.limit({ key: ip });
-    }
-    await db.recordAudit(c.env.DB, {
-      ts: now,
-      user_id: null,
-      action: 'agent_auth_failed',
-      target: serverId,
-      details: 'Server ID not found',
-      ip_hash: ipHash,
-    });
-    return c.text('Unauthorized', 401);
+    return authFail(serverId, 'Server ID not found');
   }
 
   // Calculate HMAC-SHA256(pepper, secret)
@@ -60,18 +63,7 @@ wsAgentRouter.get('/', async (c) => {
       : new Uint8Array(server.token_hash);
 
   if (!constantTimeEqual(calculatedHash, storedHash)) {
-    if (c.env.RL_AGENT) {
-      await c.env.RL_AGENT.limit({ key: ip });
-    }
-    await db.recordAudit(c.env.DB, {
-      ts: now,
-      user_id: null,
-      action: 'agent_auth_failed',
-      target: serverId,
-      details: 'Token HMAC mismatch',
-      ip_hash: ipHash,
-    });
-    return c.text('Unauthorized', 401);
+    return authFail(serverId, 'Token HMAC mismatch');
   }
 
   // SECURITY §4.5 & §14: Reconstruct Request completely before forwarding to Hub DO

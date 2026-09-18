@@ -197,4 +197,40 @@ describe('Agent WebSocket Authentication & Upgrade (/ws/agent)', () => {
     // The DO has accepted socket with agent:srv_agent_123, not forged_evil_server_id
     expect(hubStub).toBeDefined();
   });
+
+  it('SEC_M1_06_malformed_agent_tokens_trigger_audit_log_and_rate_limiting', async () => {
+    let rateLimited = false;
+    const testEnvWithRateLimit = {
+      ...testEnv,
+      RL_AGENT: {
+        limit: async () => {
+          rateLimited = true;
+          return { success: true };
+        },
+      },
+    };
+
+    // Send malformed token
+    const res = await app.request(
+      '/ws/agent',
+      {
+        headers: {
+          Upgrade: 'websocket',
+          Authorization: 'Bearer malformed.token',
+        },
+      },
+      testEnvWithRateLimit
+    );
+
+    expect(res.status).toBe(401);
+    expect(rateLimited).toBe(true);
+
+    // Verify audit log has recorded the failure
+    const auditLogs = await db.listAuditLogs(testEnv.DB, 10);
+    const failureLog = auditLogs.items.find(
+      (log) => log.action === 'agent_auth_failed'
+    );
+    expect(failureLog).toBeDefined();
+    expect(failureLog?.details).toContain('Invalid token structure');
+  });
 });
