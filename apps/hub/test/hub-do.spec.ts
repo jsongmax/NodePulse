@@ -380,4 +380,63 @@ describe('Hub Durable Object Core & Storage', () => {
     expect(closeCode).toBe(1008);
     expect(closeReason).toBe('hello required');
   });
+
+  it('SEC_M1_09_new_connection_with_same_server_id_replaces_and_closes_old_with_4001', async () => {
+    const serverId = 'srv_replace_mutual_test';
+    // Connect first socket
+    const { clientWs: socket1 } = await createConnectedAgent(serverId, 10);
+    let socket1Closed = false;
+    let socket1CloseCode: number | null = null;
+    let socket1Reason = '';
+
+    socket1.addEventListener('close', (evt: CloseEvent) => {
+      socket1Closed = true;
+      socket1CloseCode = evt.code;
+      socket1Reason = evt.reason;
+    });
+
+    // Connect second socket with identical server_id
+    const { clientWs: socket2 } = await createConnectedAgent(serverId, 10);
+    expect(socket2).toBeDefined();
+
+    await new Promise((r) => setTimeout(r, 100));
+
+    expect(socket1Closed).toBe(true);
+    expect(socket1CloseCode).toBe(4001);
+    expect(socket1Reason).toBe('replaced');
+  });
+
+  it('SEC_M1_09_invalid_schema_sample_closes_socket_with_1008', async () => {
+    const serverId = 'srv_invalid_schema_test';
+    const { clientWs } = await createConnectedAgent(serverId, 10);
+    await performHello(clientWs);
+
+    let closeCode: number | null = null;
+    let closeReason = '';
+    clientWs.addEventListener('close', (evt: CloseEvent) => {
+      closeCode = evt.code;
+      closeReason = evt.reason;
+    });
+
+    // Send sample with cpu = 150 (> 100% boundary violation)
+    clientWs.send(
+      JSON.stringify({
+        t: 's',
+        ts: Math.floor(Date.now() / 1000),
+        cpu: 150, // Invalid!
+        ld: [0.1, 0.2, 0.3],
+        mem: { u: 100, t: 200 },
+        swp: { u: 0, t: 0 },
+        dsk: [{ m: '/', u: 10, t: 100 }],
+        net: { rx: 10, tx: 10, rxs: 1, txs: 1 },
+        cn: { tcp: 1, udp: 1 },
+        pr: 10,
+        up: 100,
+      })
+    );
+
+    await new Promise((r) => setTimeout(r, 100));
+    expect(closeCode).toBe(1008);
+    expect(closeReason).toBe('invalid sample schema');
+  });
 });

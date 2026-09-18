@@ -347,4 +347,46 @@ describe('Authentication, Sessions & Cookies', () => {
       'Invalid or expired authentication credentials'
     );
   });
+
+  it('SEC_M1_09_passkey_options_generates_challenge_and_stores_with_60s_expiry', async () => {
+    const res = await app.request(
+      '/api/auth/passkey/options',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Origin: testEnv.APP_ORIGIN,
+          'X-NP-Request': '1',
+        },
+      },
+      testEnv
+    );
+
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as {
+      ok: boolean;
+      data: { challenge: string; rpId: string; userVerification: string };
+    };
+    expect(json.ok).toBe(true);
+    expect(json.data.challenge).toBeDefined();
+    expect(json.data.userVerification).toBe('required');
+
+    // Challenge should be saved in DB
+    const now = Math.floor(Date.now() / 1000);
+    const challengeBytes = await db.consumeChallenge(
+      testEnv.DB,
+      `auth:${json.data.challenge}`,
+      'authentication',
+      now
+    );
+    expect(challengeBytes).not.toBeNull();
+    // After consumption, immediate second consume must be null (single-use)
+    const secondConsume = await db.consumeChallenge(
+      testEnv.DB,
+      `auth:${json.data.challenge}`,
+      'authentication',
+      now
+    );
+    expect(secondConsume).toBeNull();
+  });
 });
