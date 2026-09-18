@@ -238,4 +238,31 @@ describe('Setup Flow (/api/setup/* and /setup)', () => {
     };
     expect(statusJson.data.setup_done).toBe(true);
   });
+
+  it('SEC_M1_08_disaster_recovery_resetup_upserts_admin_user_without_conflict', async () => {
+    const adminUserId = 'usr_admin';
+    const now = Math.floor(Date.now() / 1000);
+
+    // First creation
+    await db.createUser(testEnv.DB, {
+      id: adminUserId,
+      username: 'admin',
+      display_name: 'Original Admin',
+      role: 'admin',
+      created_at: now,
+    });
+
+    // Simulate disaster recovery re-setup with updated info
+    await db.createUser(testEnv.DB, {
+      id: adminUserId,
+      username: 'admin',
+      display_name: 'Recovered Admin',
+      role: 'admin',
+      created_at: now,
+    });
+
+    const user = await db.findUserById(testEnv.DB, adminUserId);
+    expect(user).not.toBeNull();
+    expect(user?.display_name).toBe('Recovered Admin');
+  });
 });

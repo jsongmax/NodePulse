@@ -20,8 +20,14 @@ export async function createUser(
   db: D1Database,
   user: UserRecord
 ): Promise<void> {
-  const query =
-    'INSERT INTO users (id, username, display_name, role, created_at) VALUES (?, ?, ?, ?, ?)';
+  const query = `
+    INSERT INTO users (id, username, display_name, role, created_at)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      username = excluded.username,
+      display_name = excluded.display_name,
+      role = excluded.role
+  `;
   await db
     .prepare(query)
     .bind(user.id, user.username, user.display_name, user.role, user.created_at)
