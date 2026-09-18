@@ -4,6 +4,8 @@ import { Hub } from './hub.js';
 import { setupRouter } from './api/setup.js';
 import { authRouter } from './api/auth.js';
 import { shareRouter } from './api/share.js';
+import { adminServersRouter } from './api/admin/servers.js';
+import { adminGroupsRouter } from './api/admin/groups.js';
 import * as db from './db/index.js';
 import { securityHeadersMiddleware } from './middleware/headers.js';
 import { rateLimitMiddleware } from './middleware/ratelimit.js';
@@ -47,6 +49,10 @@ app.route('/api/auth', authRouter);
 
 // Share links
 app.route('/s', shareRouter);
+
+// Admin APIs
+app.route('/api/admin/servers', adminServersRouter);
+app.route('/api/admin/groups', adminGroupsRouter);
 
 // Site public configuration
 app.get('/api/site', async (c) => {

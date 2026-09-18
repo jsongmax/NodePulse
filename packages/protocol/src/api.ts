@@ -116,6 +116,12 @@ export const createGroupRequestSchema = z
 
 export type CreateGroupRequest = z.infer<typeof createGroupRequestSchema>;
 
+export const updateGroupRequestSchema = createGroupRequestSchema
+  .partial()
+  .strict();
+
+export type UpdateGroupRequest = z.infer<typeof updateGroupRequestSchema>;
+
 export const paginationQuerySchema = z
   .object({
     cursor: safeString(128).optional(),
