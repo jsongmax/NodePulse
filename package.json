@@ -1,0 +1,28 @@
+{
+  "name": "nodepulse-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.20.0",
+  "scripts": {
+    "dev": "pnpm --filter @nodepulse/web build && pnpm --filter @nodepulse/hub dev",
+    "build": "pnpm -r build",
+    "lint": "eslint . && node scripts/lint-agent.mjs",
+    "typecheck": "pnpm -r exec tsc --noEmit",
+    "test": "pnpm -r test && node scripts/test-agent.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "setup:cf": "node scripts/setup-cf.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.20.0",
+    "eslint": "^9.20.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-security": "^3.0.1",
+    "globals": "^15.15.0",
+    "prettier": "^3.5.1",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.24.0"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": [
+      "@cloudflare/workers-types/2023-07-01",
+      "@cloudflare/vitest-pool-workers/types"
+    ],
+    "outDir": "./dist"
+  },
+  "include": ["src/**/*", "test/**/*", "migrations/**/*"]
+}

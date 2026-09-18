@@ -1,0 +1,13 @@
+node_modules
+dist
+.wrangler
+.mf
+coverage
+*.local
+.env
+.env.*
+!.env.example
+/agent/bin
+/agent/dist
+.DS_Store
+Thumbs.db

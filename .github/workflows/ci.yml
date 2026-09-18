@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  security:
+    name: Security & Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Agent Capability Gate (Ban exec / listen)
+        run: |
+          echo "Checking for forbidden calls in Go agent..."
+          if grep -rn -E "os/exec|net\.Listen|syscall\.Exec" agent/; then
+            echo "ERROR: Forbidden capabilities (exec/listen) detected in agent!"
+            exit 1
+          fi
+          echo "Agent capability gate passed."
+
+      - name: Ban dangerouslySetInnerHTML in Web
+        run: |
+          echo "Checking for dangerouslySetInnerHTML in web source..."
+          if grep -rn "dangerouslySetInnerHTML" apps/web/src; then
+            echo "ERROR: dangerouslySetInnerHTML is strictly forbidden!"
+            exit 1
+          fi
+          echo "No dangerouslySetInnerHTML found."
+
+  go:
+    name: Go Lint & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache-dependency-path: agent/go.sum
+
+      - name: Go Vet
+        run: |
+          cd agent
+          go vet ./...
+
+      - name: Go Test
+        run: |
+          cd agent
+          go test -v ./...
+
+  node:
+    name: Lint, Typecheck, Test, Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.20.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check code formatting
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Run Tests
+        run: pnpm test
+
+      - name: Build All
+        run: pnpm build
