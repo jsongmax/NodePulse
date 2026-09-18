@@ -1,28 +1,44 @@
 # NodePulse
 
-部署在 Cloudflare Workers 上的服务器监控面板（对标 nezha），**无独立管理端服务器**、**仅使用免费额度**、**安全优先**、**大屏优先**。
+部署在 Cloudflare Workers 上的服务器监控面板：没有独立的管理端服务器，运行在 Cloudflare 免费额度内，安全优先，为大屏展示而设计。
 
-当前仓库只包含设计文档与大屏原型，代码由实现 Agent 按文档产出。
+## 组成
 
-## 文档索引（按阅读顺序）
+| 目录                | 内容                                                                                                                        |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `apps/hub`          | Cloudflare Worker + Durable Object（TypeScript / Hono）：API、Passkey 认证、Agent 与浏览器的 WebSocket 通道、指标存储与告警 |
+| `apps/web`          | 前端（React / Vite / Tailwind）：总览、服务器详情、大屏、后台                                                               |
+| `packages/protocol` | Hub 与前端共用的消息与接口 schema（zod）                                                                                    |
+| `agent`             | Go 采集端：只上报、不监听端口、不执行命令                                                                                   |
+| `scripts`           | 本地开发与发布辅助脚本                                                                                                      |
 
-| 文件                                                               | 读者                | 内容                                                                                                                              |
-| ------------------------------------------------------------------ | ------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)                       | 实现 Agent / 工程师 | 总体架构、Durable Object Hub 设计、数据模型、免费额度核算、Agent 设计、仓库结构、部署流程                                         |
-| [docs/SECURITY.md](docs/SECURITY.md)                               | 所有人（合并门槛）  | 安全原则、威胁模型、Passkey 认证、会话、Agent 令牌、CSP、输入校验、密钥、通知出站、Agent 加固、供应链、边缘配置、**§14 检查清单** |
-| [docs/API-AND-PROTOCOL.md](docs/API-AND-PROTOCOL.md)               | 实现 Agent          | HTTP API、Agent WebSocket 协议、Viewer 协议、告警语义、安装命令、错误码                                                           |
-| [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md)         | 实现 Agent          | 工作规则、M0–M6 里程碑、每个里程碑的任务与验收标准、踩坑预防                                                                      |
-| [docs/HANDOFF-PLAYBOOK.md](docs/HANDOFF-PLAYBOOK.md)               | 项目负责人          | 每个里程碑可直接复制的启动/审查/修复指令、验收动作、常见情况应答                                                                  |
-| [docs/DESIGN-HANDOFF.md](docs/DESIGN-HANDOFF.md)                   | 项目负责人 / 设计师 | Figma 稿完成后如何接入实现：交付物清单、Figma MCP、令牌同步、追加指令、验收与后续修改                                             |
-| [docs/FRONTEND-DESIGN.md](docs/FRONTEND-DESIGN.md)                 | Figma 设计师 / 前端 | 设计概念、令牌（颜色/字体/间距/动效）、组件清单、各页面规格、**大屏规格**、Figma 文件组织                                         |
-| [docs/design/wall-prototype.html](docs/design/wall-prototype.html) | 设计师 / 前端       | 大屏可运行原型：用浏览器打开即可；按 `1`/`2` 切换 Map/Grid 场景，按 `R` 触发一次全员上报                                          |
+## 开发
 
-## 三条硬约束
+```bash
+pnpm install
+pnpm dev          # 构建前端并启动本地 Worker（wrangler dev，本地模拟 D1 与 Durable Object）
+pnpm test
+pnpm lint
+pnpm typecheck
+```
 
-1. **安全第一**：无远程执行、无口令、Passkey 登录、默认私有、Agent 数据视为不可信输入。
-2. **免费额度**：单例 Durable Object + WebSocket（入站消息 20:1 计费）+ 环形表零删除；免费版舒适支持约 40 台服务器（1 分钟粒度）。
-3. **大屏极致好看**：Observatory 概念 —— 点阵地图 + 心跳涟漪 + 心电线 + 带宽河流。
+Go 采集端：
 
-## 给实现 Agent 的一句话
+```bash
+cd agent && go test ./...
+```
 
-先读 `IMPLEMENTATION-PLAN.md` §0 工作规则，再按 M0 → M6 执行；每个 PR 逐条勾选 `SECURITY.md` §14，并核对 `ARCHITECTURE.md` §7 额度表。
+## 安全边界
+
+- 采集端只向 Hub 上报数据，不接受任何可执行指令，不监听端口，以专用用户和 systemd 加固运行。
+- 管理员只能用 Passkey（WebAuthn）登录，系统不存在口令。
+- 面板默认私有；只读访问通过可撤销的分享令牌。
+- 所有输入经严格 schema 校验，SQL 全部参数化，前端不加载任何第三方资源。
+
+## 部署
+
+需要一个开启了双因素认证的 Cloudflare 账户。本地执行 `wrangler login` 后运行 `pnpm setup:cf` 创建资源与密钥，再 `wrangler deploy`，首次访问 `/setup` 注册 Passkey。
+
+## 许可证
+
+TODO(human)
